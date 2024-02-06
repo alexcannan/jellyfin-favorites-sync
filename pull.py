@@ -150,5 +150,12 @@ audios = list(audio_sync_paths.values())
 new_audios = [a for a in audios if not a.sync_filepath.exists()]
 logger.info(f"Syncing {len(new_audios)} new audio files from {len(audios)} favorited"
             f" ({100 * len(new_audios) / len(audios):.2f}%)")
+# display % completed every 20%
+progress_messages = {min(int(0.2 * len(new_audios) * i), len(new_audios)-1): f"{20 * i}%" for i in range(6)}
 with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-    executor.map(sync_audio, audios)
+    n_complete = 0
+    futures = {executor.submit(sync_audio, audio): audio for audio in new_audios}
+    for _ in concurrent.futures.as_completed(futures):
+        if n_complete in progress_messages:
+            logger.info(f"{progress_messages[n_complete]} complete")
+        n_complete += 1
