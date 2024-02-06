@@ -14,7 +14,6 @@ import subprocess
 from typing import List, Literal
 
 import requests
-from tqdm import tqdm
 
 
 ### CONFIG
@@ -149,7 +148,4 @@ def sync_audio(audio: Audio):
 n_workers = os.cpu_count() - 1 or 1
 audios = list(audio_sync_paths.values())
 with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-    with tqdm(total=len(audios), desc="syncing jellyfin favorites") as pbar:
-        futures = {executor.submit(sync_audio, audio): audio for audio in audios}
-        for future in concurrent.futures.as_completed(futures):
-            pbar.update(1)
+    futures = {executor.submit(sync_audio, audio): audio for audio in audios}
