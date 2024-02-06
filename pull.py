@@ -50,6 +50,11 @@ headers = {
     'X-Emby-Token': API_KEY,
 }
 
+ffmpeg_bin_response = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
+assert not ffmpeg_bin_response.returncode, "ffmpeg not found in PATH"
+ffmpeg_bin = ffmpeg_bin_response.stdout.strip()
+logger.debug(f"Found ffmpeg at {ffmpeg_bin}")
+
 
 ### VALIDATION
 
@@ -136,6 +141,7 @@ audio_sync_paths = {a.sync_filepath.absolute(): a for a in audio}
 # delete any files in the sync folder that aren't in the audio list
 for file in Path(SYNC_FOLDER).rglob("*"):
     if file.is_file() and file.absolute() not in audio_sync_paths:
+        logger.debug(f"Deleting file {file}")
         file.unlink()
 
 
@@ -144,10 +150,10 @@ def sync_audio(audio: Audio):
         audio.sync_filepath.parent.mkdir(exist_ok=True, parents=True)
         logger.debug(f"Syncing {audio.Path} to {audio.sync_filepath}")
         rc = subprocess.run([
-            "ffmpeg",
+            ffmpeg_bin,
             "-i", audio.Path,
             "-codec:a", "libmp3lame",
-            "-q:a", "2",
+            "-q:a", "2",  # V2 quality
             "-ar", "44100",
             "-ac", "2",
             audio.sync_filepath,
