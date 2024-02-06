@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import inspect
 import json
 import logging
+import logging.handlers
 from pathlib import Path
 import os
 import subprocess
@@ -16,7 +17,7 @@ from typing import List, Literal
 import requests
 
 
-### CONFIG
+### CONFIG / SETUP
 
 
 config_file = Path(__file__).parent / "config.json"
@@ -26,6 +27,28 @@ API_KEY = config["API_KEY"]
 SERVER_URL = config["SERVER_URL"]
 USER_ID = config["USER_ID"]
 assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+log_file = Path(__file__).parent / "jellyfin-favorites-dump.log"
+log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+file_handler = logging.handlers.RotatingFileHandler(log_file, mode='a', maxBytes=5*1024*1024)
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.DEBUG)
+logger.addHandler(file_handler)
+
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+console.setFormatter(log_formatter)
+logger.addHandler(console)
+
+Path(SYNC_FOLDER).mkdir(exist_ok=True, parents=True)
+
+headers = {
+    'X-Emby-Token': API_KEY,
+}
 
 
 ### VALIDATION
@@ -69,23 +92,11 @@ class Audio(Item):
         return Path(SYNC_FOLDER) / f"{self.artist_repr} - {self.Album} [{self.ProductionYear}]" / f"{self.IndexNumber:02} {self.Name}.mp3"
 
 
-### SETUP
+### LET'S GO
 
 
-logger = logging.getLogger("jffd")
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-
-Path(SYNC_FOLDER).mkdir(exist_ok=True, parents=True)
 audio: List[Audio] = []
 parent_items: List[Item] = []
-
-headers = {
-    'X-Emby-Token': API_KEY,
-}
-
-
-### LET'S GO
 
 
 # get all favorited audio, including albums and artists
@@ -99,11 +110,13 @@ items_url = f"{SERVER_URL}/Users/{USER_ID}/Items"
 favorites_response = requests.get(items_url, headers=headers, params=params)
 favorites = favorites_response.json()
 
+
 for item in favorites["Items"]:
     if item["Type"] == "Audio":
         audio.append(Audio.from_dict(item))
     else:
         parent_items.append(Item.from_dict(item))
+
 
 # get all audio from favorited albums and artists
 for parent_item in parent_items:
