@@ -147,5 +147,8 @@ def sync_audio(audio: Audio):
 # sync audio files
 n_workers = os.cpu_count() - 1 or 1
 audios = list(audio_sync_paths.values())
+new_audios = [a for a in audios if not a.sync_filepath.exists()]
+logger.info(f"Syncing {len(new_audios)} new audio files from {len(audios)} favorited"
+            f" ({100 * len(new_audios) / len(audios):.2f}%)")
 with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-    futures = {executor.submit(sync_audio, audio): audio for audio in audios}
+    executor.map(sync_audio, audios)
