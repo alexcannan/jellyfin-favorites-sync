@@ -154,7 +154,7 @@ def sync_audio(audio: Audio):
             ffmpeg_bin,
             "-i", audio.Path,
             "-codec:a", "libmp3lame",
-            "-q:a", "2",  # V2 quality
+            "-q:a", "0",  # V0 quality
             "-ar", "44100",
             "-ac", "2",
             audio.sync_filepath,
