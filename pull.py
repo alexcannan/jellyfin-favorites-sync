@@ -80,9 +80,9 @@ class Item(BaseItem):
 class Audio(Item):
     Artists: List[str]
     Album: str
-    ProductionYear: str
-    IndexNumber: int
     Path: str
+    IndexNumber: int = -1
+    ProductionYear: str = "UNK"
 
     @property
     def artist_repr(self):
@@ -124,6 +124,7 @@ for item in favorites["Items"]:
 
 
 # get all audio from favorited albums and artists
+logger.info(f"{len(audio)} song(s) favorited, now gathering songs from {len(parent_items)} favorited Artists/Albums")
 for parent_item in parent_items:
     params = {
         "includeItemTypes": ["Audio"],
