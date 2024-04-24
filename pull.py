@@ -80,6 +80,7 @@ class Item(BaseItem):
 class Audio(Item):
     Artists: List[str]
     Album: str
+    AlbumId: str
     Path: str
     IndexNumber: int = -1
     ProductionYear: str = "UNK"
@@ -179,3 +180,31 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         if n_complete in progress_messages:
             logger.info(f"{progress_messages[n_complete]} complete")
         n_complete += 1
+
+
+def sync_cover(album_dir: Path, album_id: str):
+    album_cover_url = f"{SERVER_URL}/Items/{album_id}/Images/Primary"
+    cover_response = requests.get(album_cover_url, headers=headers)
+    if cover_response.headers["Content-Type"] == "image/jpeg":
+        ext = "jpg"
+    elif cover_response.headers["Content-Type"] == "image/png":
+        ext = "png"
+    else:
+        logger.error(f"Unknown cover image type: {cover_response.headers['Content-Type']}")
+        return
+    cover_path = album_dir / f"cover.{ext}"
+    if not cover_path.exists():
+        with open(cover_path, "wb") as f:
+            f.write(cover_response.content)
+            logger.debug(f"Synced cover for {album_dir}")
+
+
+if True:
+    # sync album art
+    album_dirs_to_id = {a.sync_filepath.parent: a.AlbumId for a in audio}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        album_futures = {}
+        for album_dir, album_id in album_dirs_to_id.items():
+            album_futures[executor.submit(sync_cover, album_dir, album_id)] = album_dir
+        for _ in concurrent.futures.as_completed(futures):
+            pass
