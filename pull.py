@@ -143,6 +143,8 @@ audio_sync_paths = {a.sync_filepath.absolute(): a for a in audio}
 # delete any files in the sync folder that aren't in the audio list
 for file in Path(SYNC_FOLDER).rglob("*"):
     if file.is_file() and file.absolute() not in audio_sync_paths:
+        if file.suffix in (".jpg", ".png"):  # keep cover images
+            continue
         logger.debug(f"Deleting file {file}")
         file.unlink()
 
