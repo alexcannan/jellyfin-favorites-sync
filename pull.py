@@ -63,10 +63,14 @@ logger.debug(f"Found ffmpeg at {ffmpeg_bin}")
 class BaseItem:
     @classmethod
     def from_dict(cls, env):
-        return cls(**{
-            k: v for k, v in env.items()
-            if k in inspect.signature(cls).parameters
-        })
+        try:
+            return cls(**{
+                k: v for k, v in env.items()
+                if k in inspect.signature(cls).parameters
+            })
+        except Exception as e:
+            logger.error(f"parse failure [{e}] from item {env}")
+            raise e
 
 
 @dataclass
@@ -174,7 +178,8 @@ new_audios = [a for a in audios if not a.sync_filepath.exists()]
 logger.info(f"Syncing {len(new_audios)} new audio files from {len(audios)} favorited"
             f" ({100 * len(new_audios) / len(audios):.2f}%)")
 # display % completed every 20%
-progress_messages = {min(int(0.2 * len(new_audios) * i), len(new_audios)-1): f"{20 * i}%" for i in range(6)}
+pct_interval = 20
+progress_messages = {min(int((pct_interval / 100) * len(new_audios) * i), len(new_audios)-1): f"{pct_interval * i}%" for i in range(6)}
 with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
     n_complete = 0
     futures = {executor.submit(sync_audio, audio): audio for audio in new_audios}
