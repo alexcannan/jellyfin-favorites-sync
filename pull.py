@@ -11,6 +11,7 @@ import logging
 import logging.handlers
 from pathlib import Path
 import os
+import re
 import subprocess
 from typing import List, Literal
 
@@ -59,6 +60,10 @@ logger.debug(f"Found ffmpeg at {ffmpeg_bin}")
 ### VALIDATION
 
 
+def safe(s: str) -> str:
+    return re.sub(r'[?:/]', '', s)
+
+
 @dataclass
 class BaseItem:
     @classmethod
@@ -91,7 +96,7 @@ class Audio(Item):
 
     @property
     def artist_repr(self):
-        return ", ".join(self.Artists)
+        return safe(", ".join(self.Artists))
 
     @property
     def extension(self):
@@ -99,7 +104,7 @@ class Audio(Item):
 
     @property
     def sync_filepath(self):
-        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {self.Album} [{self.ProductionYear}]" / f"{self.IndexNumber:02} {self.Name}.mp3"
+        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {safe(self.Album)} [{self.ProductionYear}]" / f"{self.IndexNumber:02} {safe(self.Name)}.mp3"
 
 
 ### LET'S GO
