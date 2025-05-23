@@ -2,7 +2,7 @@
 
 Easily sync all of your favorite music from Jellyfin to an mp3 player of your choice.
 
-This is a simple script to gather and dump all of your favorited music to a directory, perhaps for use with [syncthing](https://github.com/syncthing/syncthing). Audio files are transcoded to V0 MP3s, preserving metadata. Album covers are also downloaded and saved as `cover.$ext` in the album directory.
+This is a simple script to gather and dump all of your favorited music to a directory, perhaps for use with [syncthing](https://github.com/syncthing/syncthing) or `rsync`. Audio files are transcoded to V0 MP3s, preserving metadata. Album covers are also downloaded and saved as `cover.$ext` in the album directory.
 
 ## Usage
 
