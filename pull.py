@@ -61,7 +61,7 @@ logger.debug(f"Found ffmpeg at {ffmpeg_bin}")
 
 
 def safe(s: str) -> str:
-    return re.sub(r'[?:/]', '', s)
+    return re.sub(r'[<>:"/\\|?*+]', '', s)
 
 
 @dataclass
