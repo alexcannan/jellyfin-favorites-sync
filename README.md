@@ -19,7 +19,7 @@ The only non-standard library required is `requests`, which can be installed usi
 
 ### Scheduling
 
-Once these dependencies are met and the config is set, I recommend simply setting up a cron task to run the script at a regular interval. For example, to run it every night at 3:00 AM, open your crontab with `crontab -e` and add the line `0 3 * * * python3 /path/to/jellyfin-favorites-dump/pull.py`.
+Once these dependencies are met and the config is set, I recommend simply setting up a cron task to run the script at a regular interval. For example, to run it every night at 3:00 AM, open your crontab with `crontab -e` and add the line `0 3 * * * JFS_USER_ID=... JFS_API_KEY=... JFS_SYNC_FOLDER=/path/to/persistent/directory python3 /path/to/jellyfin-favorites-dump/pull.py`.
 
 ### Platform Support
 
