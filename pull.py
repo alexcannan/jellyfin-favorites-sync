@@ -21,12 +21,10 @@ import requests
 ### CONFIG / SETUP
 
 
-config_file = Path(__file__).parent / "config.json"
-config = json.loads(config_file.read_text())
-SYNC_FOLDER = config["SYNC_FOLDER"]
-API_KEY = config["API_KEY"]
-SERVER_URL = config["SERVER_URL"]
-USER_ID = config["USER_ID"]
+SYNC_FOLDER = os.environ.get("JFS_SYNC_FOLDER", "/tmp/jellyfin-favorites-dump")
+API_KEY = os.environ["JFS_API_KEY"]
+SERVER_URL = os.environ.get("JFS_SERVER_URL", "http://localhost:8096")
+USER_ID = os.environ["JFS_USER_ID"]
 assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
 
 

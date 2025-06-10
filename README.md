@@ -10,13 +10,12 @@ This is a simple script to gather and dump all of your favorited music to a dire
 
 The only non-standard library required is `requests`, which can be installed using `apt install python3-requests` if it hasn't been already. The transcoding relies on `ffmpeg`, which should already be installed if you're using Jellyfin, though you may have to add it to your PATH.
 
-### Configuration
+### Environment Variables
 
-Some configuration is required in `config.json`:
-- `SERVER_URL`: The URL of your Jellyfin server, defaults to localhost.
-- `API_KEY`: Your Jellyfin API key, which can be found in the dashboard under "Advanced".
-- `USER_ID`: Your Jellyfin user ID. When on your user page, this is located in the url.
-- `SYNC_FOLDER`: The directory to sync to. This is the directory that will be filled with your favorited music. Defaults to something in `/tmp` (which will be emptied on shutdown), change to your desired file system location for persistence.
+- `JFS_SERVER_URL`: The URL of your Jellyfin server, defaults to localhost.
+- `JFS_API_KEY`: Your Jellyfin API key, which can be found in the dashboard under "Advanced".
+- `JFS_USER_ID`: Your Jellyfin user ID. When on your user page, this is located in the url.
+- `JFS_SYNC_FOLDER`: The directory to sync to. This is the directory that will be filled with your favorited music. Defaults to something in `/tmp` (which will be emptied on shutdown), change to your desired file system location for persistence.
 
 ### Scheduling
 
