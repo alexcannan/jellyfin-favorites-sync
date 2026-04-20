@@ -13,9 +13,13 @@ from pathlib import Path
 import os
 import re
 import subprocess
-from typing import List, Literal
+import sys
+from typing import List, Literal, Optional
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-import requests
+
+DRY_RUN = "--dry-run" in sys.argv
 
 
 ### CONFIG / SETUP
@@ -48,6 +52,20 @@ Path(SYNC_FOLDER).mkdir(exist_ok=True, parents=True)
 headers = {
     'X-Emby-Token': API_KEY,
 }
+
+
+def jf_get(url: str, params: Optional[dict] = None) -> bytes:
+    # Jellyfin expects comma-joined lists (e.g. "Audio,MusicAlbum"), not repeated keys.
+    if params:
+        flat = {k: ",".join(v) if isinstance(v, list) else v for k, v in params.items()}
+        url = f"{url}?{urlencode(flat)}"
+    with urlopen(Request(url, headers=headers)) as r:
+        return r.read()
+
+
+def jf_get_json(url: str, params: Optional[dict] = None) -> dict:
+    return json.loads(jf_get(url, params))
+
 
 ffmpeg_bin_response = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
 assert not ffmpeg_bin_response.returncode, "ffmpeg not found in PATH"
@@ -121,8 +139,7 @@ params = {
     "fields": ["Path"],
 }
 items_url = f"{SERVER_URL}/Users/{USER_ID}/Items"
-favorites_response = requests.get(items_url, headers=headers, params=params)
-favorites = favorites_response.json()
+favorites = jf_get_json(items_url, params)
 
 
 for item in favorites["Items"]:
@@ -132,22 +149,32 @@ for item in favorites["Items"]:
         parent_items.append(Item.from_dict(item))
 
 
-# get all audio from favorited albums and artists
+# get all audio from favorited albums and artists, in parallel
 logger.info(f"{len(audio)} song(s) favorited, now gathering songs from {len(parent_items)} favorited Artists/Albums")
-for parent_item in parent_items:
-    params = {
+
+
+def fetch_children(parent_id: str) -> list:
+    return jf_get_json(items_url, {
         "includeItemTypes": ["Audio"],
         "recursive": True,
-        "parentId": parent_item.Id,
+        "parentId": parent_id,
         "fields": ["Path"],
-    }
-    children_response = requests.get(items_url, headers=headers, params=params)
-    children = children_response.json()
-    for child in children["Items"]:
-        audio.append(Audio.from_dict(child))
+    })["Items"]
+
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    for children in executor.map(fetch_children, [p.Id for p in parent_items]):
+        for child in children:
+            audio.append(Audio.from_dict(child))
 
 
 audio_sync_paths = {a.sync_filepath.absolute(): a for a in audio}
+
+if DRY_RUN:
+    for path in audio_sync_paths:
+        print(path)
+    sys.exit(0)
+
 # delete any files in the sync folder that aren't in the audio list
 for file in Path(SYNC_FOLDER).rglob("*"):
     if file.is_file() and file.absolute() not in audio_sync_paths:
@@ -195,18 +222,20 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
 
 def sync_cover(album_dir: Path, album_id: str):
     album_cover_url = f"{SERVER_URL}/Items/{album_id}/Images/Primary"
-    cover_response = requests.get(album_cover_url, headers=headers)
-    if cover_response.headers["Content-Type"] == "image/jpeg":
+    with urlopen(Request(album_cover_url, headers=headers)) as r:
+        content_type = r.headers["Content-Type"]
+        body = r.read()
+    if content_type == "image/jpeg":
         ext = "jpg"
-    elif cover_response.headers["Content-Type"] == "image/png":
+    elif content_type == "image/png":
         ext = "png"
     else:
-        logger.error(f"Unknown cover image type: {cover_response.headers['Content-Type']}")
+        logger.error(f"Unknown cover image type: {content_type}")
         return
     cover_path = album_dir / f"cover.{ext}"
     if not cover_path.exists():
         with open(cover_path, "wb") as f:
-            f.write(cover_response.content)
+            f.write(body)
             logger.debug(f"Synced cover for {album_dir}")
 
 

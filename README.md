@@ -8,7 +8,7 @@ This is a simple script to gather and dump all of your favorited music to a dire
 
 ### Dependencies
 
-The only non-standard library required is `requests`, which can be installed using `apt install python3-requests` if it hasn't been already. The transcoding relies on `ffmpeg`, which should already be installed if you're using Jellyfin, though you may have to add it to your PATH.
+No non-standard Python libraries are required. The transcoding relies on `ffmpeg`, which should already be installed if you're using Jellyfin, though you may have to add it to your PATH.
 
 ### Environment Variables
 
