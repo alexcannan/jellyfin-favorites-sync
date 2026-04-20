@@ -110,6 +110,13 @@ class Audio(Item):
     IndexNumber: int = -1
     ProductionYear: str = "UNK"
 
+    @classmethod
+    def from_dict(cls, env):
+        # single-track releases in Jellyfin have no Album — treat the track as its own album
+        if "Album" not in env:
+            env = {**env, "Album": env["Name"], "AlbumId": env["Id"]}
+        return super().from_dict(env)
+
     @property
     def artist_repr(self):
         return safe(", ".join(self.Artists))
