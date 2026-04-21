@@ -1,6 +1,6 @@
 # jellyfin-favorites-sync
 
-Gather and dump all of your favorited music from Jellyfin to a directory, perhaps for use with [syncthing](https://github.com/syncthing/syncthing) or `rsync` onto an mp3 player of your choice. Audio files are transcoded to V0 MP3s by default, preserving metadata. Album covers are also downloaded and saved as `cover.$ext` in the album directory.
+Gather and dump all of your favorited music from Jellyfin to a directory, perhaps for use with [rsync](https://linux.die.net/man/1/rsync) or [syncthing](https://github.com/syncthing/syncthing) onto an mp3 player of your choice. Audio files are transcoded to V0 MP3s by default, preserving metadata. Album covers are also downloaded and saved as `cover.$ext` in the album directory.
 
 ## Usage
 
