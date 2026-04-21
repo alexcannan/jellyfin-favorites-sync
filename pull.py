@@ -145,7 +145,8 @@ class Audio(Item):
     @property
     def sync_filepath(self):
         safe_name = safe(self.Name)[:100]
-        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {safe(self.Album)} [{self.ProductionYear}]" / f"{self.IndexNumber:02} {safe_name}.mp3"
+        prefix = f"{self.IndexNumber:02} " if self.IndexNumber >= 0 else ""
+        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {safe(self.Album)} [{self.ProductionYear}]" / f"{prefix}{safe_name}.mp3"
 
 
 ### LET'S GO
