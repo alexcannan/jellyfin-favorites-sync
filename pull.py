@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from typing import List, Literal, Optional
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -30,6 +31,8 @@ API_KEY = os.environ["JFS_API_KEY"]
 SERVER_URL = os.environ.get("JFS_SERVER_URL", "http://localhost:8096")
 USER_ID = os.environ["JFS_USER_ID"]
 assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
+
+N_WORKERS = os.cpu_count() - 1 or 1
 
 
 logger = logging.getLogger()
@@ -78,6 +81,20 @@ logger.debug(f"Found ffmpeg at {ffmpeg_bin}")
 
 def safe(s: str) -> str:
     return re.sub(r'[<>:"/\\|?*+]', '', s)
+
+
+def progress(iterable, total: int, desc: str):
+    start = time.monotonic()
+    for i, item in enumerate(iterable, 1):
+        elapsed = time.monotonic() - start
+        eta = elapsed * (total - i) / i
+        sys.stderr.write(
+            f"\r{desc}: {i}/{total} [{100*i//total:3d}%] "
+            f"{int(elapsed)}s<{int(eta)}s"
+        )
+        sys.stderr.flush()
+        yield item
+    sys.stderr.write("\n")
 
 
 @dataclass
@@ -139,6 +156,7 @@ parent_items: List[Item] = []
 
 
 # get all favorited audio, including albums and artists
+logger.info("fetching favorited music from jellyfin")
 params = {
     "includeItemTypes": ["MusicAlbum", "MusicArtist", "Audio"],
     "recursive": True,
@@ -169,8 +187,9 @@ def fetch_children(parent_id: str) -> list:
     })["Items"]
 
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-    for children in executor.map(fetch_children, [p.Id for p in parent_items]):
+with concurrent.futures.ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
+    results = executor.map(fetch_children, parent_items)
+    for children in progress(results, total=len(parent_items), desc="fetching"):
         for child in children:
             audio.append(Audio.from_dict(child))
 
@@ -210,7 +229,6 @@ def sync_audio(audio: Audio):
 
 
 # sync audio files
-n_workers = os.cpu_count() - 1 or 1
 audios = list(audio_sync_paths.values())
 new_audios = [a for a in audios if not a.sync_filepath.exists()]
 logger.info(f"Syncing {len(new_audios)} new audio files from {len(audios)} favorited"
@@ -218,7 +236,7 @@ logger.info(f"Syncing {len(new_audios)} new audio files from {len(audios)} favor
 # display % completed every 20%
 pct_interval = 20
 progress_messages = {min(int((pct_interval / 100) * len(new_audios) * i), len(new_audios)-1): f"{pct_interval * i}%" for i in range(6)}
-with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+with concurrent.futures.ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
     n_complete = 0
     futures = {executor.submit(sync_audio, audio): audio for audio in new_audios}
     for _ in concurrent.futures.as_completed(futures):
@@ -249,7 +267,7 @@ def sync_cover(album_dir: Path, album_id: str):
 if True:
     # sync album art
     album_dirs_to_id = {a.sync_filepath.parent: a.AlbumId for a in audio}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
         album_futures = {}
         for album_dir, album_id in album_dirs_to_id.items():
             album_futures[executor.submit(sync_cover, album_dir, album_id)] = album_dir
