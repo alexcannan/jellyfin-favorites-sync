@@ -179,11 +179,13 @@ for item in favorites["Items"]:
 logger.info(f"{len(audio)} song(s) favorited, now gathering songs from {len(parent_items)} favorited Artists/Albums")
 
 
-def fetch_children(parent_id: str) -> list:
+def fetch_children(parent: Item) -> list:
+    # MusicAlbums are flat; recursive=true triples Jellyfin's latency for no extra data.
+    # MusicArtists need recursive=true to walk into their albums.
     return jf_get_json(items_url, {
         "includeItemTypes": ["Audio"],
-        "recursive": True,
-        "parentId": parent_id,
+        "recursive": parent.Type != "MusicAlbum",
+        "parentId": parent.Id,
         "fields": ["Path"],
     })["Items"]
 
