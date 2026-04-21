@@ -12,6 +12,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -217,6 +218,9 @@ def sync_audio(audio: Audio):
     if not audio.sync_filepath.exists():
         audio.sync_filepath.parent.mkdir(exist_ok=True, parents=True)
         logger.debug(f"Syncing {audio.Path} to {audio.sync_filepath}")
+        if audio.extension.lower() == ".mp3":
+            shutil.copyfile(audio.Path, audio.sync_filepath)
+            return
         rc = subprocess.run([
             ffmpeg_bin,
             "-i", audio.Path,
