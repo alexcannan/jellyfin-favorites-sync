@@ -36,6 +36,23 @@ assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
 N_WORKERS = os.cpu_count() - 1 or 1
 
 
+@dataclass
+class TranscodeTarget:
+    extension: str          # e.g. ".mp3"
+    ffmpeg_args: List[str]  # args placed between "-i INPUT" and OUTPUT
+
+
+TARGETS = {
+    "mp3-v0":   TranscodeTarget(".mp3",  ["-codec:a", "libmp3lame", "-q:a", "0", "-ar", "44100", "-ac", "2"]),
+    "ogg-q6":   TranscodeTarget(".ogg",  ["-codec:a", "libvorbis", "-q:a", "6"]),
+    "opus-128": TranscodeTarget(".opus", ["-codec:a", "libopus", "-b:a", "128k"]),
+}
+_target_name = os.environ.get("JFS_TARGET", "mp3-v0")
+if _target_name not in TARGETS:
+    raise SystemExit(f"JFS_TARGET={_target_name!r} is not one of {list(TARGETS)}")
+TARGET = TARGETS[_target_name]
+
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 log_file = Path(__file__).parent / "jellyfin-favorites-dump.log"
@@ -147,7 +164,7 @@ class Audio(Item):
     def sync_filepath(self):
         safe_name = safe(self.Name)[:100]
         prefix = f"{self.IndexNumber:02} " if self.IndexNumber >= 0 else ""
-        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {safe(self.Album)} [{self.ProductionYear}]" / f"{prefix}{safe_name}.mp3"
+        return Path(SYNC_FOLDER) / f"{self.artist_repr} - {safe(self.Album)} [{self.ProductionYear}]" / f"{prefix}{safe_name}{TARGET.extension}"
 
 
 ### LET'S GO
@@ -218,16 +235,13 @@ def sync_audio(audio: Audio):
     if not audio.sync_filepath.exists():
         audio.sync_filepath.parent.mkdir(exist_ok=True, parents=True)
         logger.debug(f"Syncing {audio.Path} to {audio.sync_filepath}")
-        if audio.extension.lower() == ".mp3":
+        if audio.extension.lower() == TARGET.extension:
             shutil.copyfile(audio.Path, audio.sync_filepath)
             return
         rc = subprocess.run([
             ffmpeg_bin,
             "-i", audio.Path,
-            "-codec:a", "libmp3lame",
-            "-q:a", "0",  # V0 quality
-            "-ar", "44100",
-            "-ac", "2",
+            *TARGET.ffmpeg_args,
             audio.sync_filepath,
         ], capture_output=True)
         if rc.returncode:
