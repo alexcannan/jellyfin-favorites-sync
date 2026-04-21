@@ -27,7 +27,7 @@ DRY_RUN = "--dry-run" in sys.argv
 ### CONFIG / SETUP
 
 
-SYNC_FOLDER = os.environ.get("JFS_SYNC_FOLDER", "/tmp/jellyfin-favorites-dump")
+SYNC_FOLDER = os.environ.get("JFS_SYNC_FOLDER", "/tmp/jellyfin-favorites-sync")
 API_KEY = os.environ["JFS_API_KEY"]
 SERVER_URL = os.environ.get("JFS_SERVER_URL", "http://localhost:8096")
 USER_ID = os.environ["JFS_USER_ID"]
@@ -55,7 +55,7 @@ TARGET = TARGETS[_target_name]
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-log_file = Path(__file__).parent / "jellyfin-favorites-dump.log"
+log_file = Path(__file__).parent / "jellyfin-favorites-sync.log"
 log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
 file_handler = logging.handlers.RotatingFileHandler(log_file, mode='a', maxBytes=5*1024*1024, backupCount=1)
