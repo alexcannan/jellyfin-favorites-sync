@@ -292,5 +292,5 @@ if True:
         album_futures = {}
         for album_dir, album_id in album_dirs_to_id.items():
             album_futures[executor.submit(sync_cover, album_dir, album_id)] = album_dir
-        for _ in concurrent.futures.as_completed(futures):
+        for _ in concurrent.futures.as_completed(album_futures):
             pass
