@@ -12,7 +12,6 @@ import logging.handlers
 from pathlib import Path
 import os
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -147,6 +146,8 @@ class Audio(Item):
     Path: str
     IndexNumber: int = -1
     ProductionYear: str = "UNK"
+    NormalizationGain: Optional[float] = None
+    AlbumNormalizationGain: Optional[float] = None
 
     @classmethod
     def from_dict(cls, env):
@@ -241,22 +242,35 @@ for d in Path(SYNC_FOLDER).iterdir():
         d.rmdir()
 
 
+def _replaygain_args(audio: Audio) -> List[str]:
+    # ReplayGain 2.0 tag values; Jellyfin already reports gains against the -18 LUFS reference,
+    # so no conversion needed. ffmpeg writes these as TXXX frames (mp3) or Vorbis comments (ogg/opus).
+    args = []
+    if audio.NormalizationGain is not None:
+        args += ["-metadata", f"replaygain_track_gain={audio.NormalizationGain:.2f} dB"]
+    if audio.AlbumNormalizationGain is not None:
+        args += ["-metadata", f"replaygain_album_gain={audio.AlbumNormalizationGain:.2f} dB"]
+    return args
+
+
 def sync_audio(audio: Audio):
-    if not audio.sync_filepath.exists():
-        audio.sync_filepath.parent.mkdir(exist_ok=True, parents=True)
-        logger.debug(f"Syncing {audio.Path} to {audio.sync_filepath}")
-        if audio.extension.lower() == TARGET.extension:
-            shutil.copyfile(audio.Path, audio.sync_filepath)
-            return
-        rc = subprocess.run([
-            ffmpeg_bin,
-            "-i", audio.Path,
-            *TARGET.ffmpeg_args,
-            audio.sync_filepath,
-        ], capture_output=True)
-        if rc.returncode:
-            logger.error(f"Failed to sync {audio.Path} to {audio.sync_filepath}")
-            logger.error(f"ffmpeg output: {rc.stderr.decode()}")
+    if audio.sync_filepath.exists():
+        return
+    audio.sync_filepath.parent.mkdir(exist_ok=True, parents=True)
+    logger.debug(f"Syncing {audio.Path} to {audio.sync_filepath}")
+    # Stream-copy when the source already matches the target container; transcode otherwise.
+    # Either way we go through ffmpeg so ReplayGain metadata gets written.
+    codec_args = ["-c:a", "copy"] if audio.extension.lower() == TARGET.extension else TARGET.ffmpeg_args
+    rc = subprocess.run([
+        ffmpeg_bin,
+        "-i", audio.Path,
+        *codec_args,
+        *_replaygain_args(audio),
+        audio.sync_filepath,
+    ], capture_output=True)
+    if rc.returncode:
+        logger.error(f"Failed to sync {audio.Path} to {audio.sync_filepath}")
+        logger.error(f"ffmpeg output: {rc.stderr.decode()}")
 
 
 # sync audio files
