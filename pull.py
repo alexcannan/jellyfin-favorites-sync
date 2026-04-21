@@ -223,12 +223,19 @@ if DRY_RUN:
     sys.exit(0)
 
 # delete any files in the sync folder that aren't in the audio list
+expected_dirs = {p.parent for p in audio_sync_paths}
 for file in Path(SYNC_FOLDER).rglob("*"):
     if file.is_file() and file.absolute() not in audio_sync_paths:
-        if file.suffix in (".jpg", ".png"):  # keep cover images
+        # keep cover images, but only in dirs we still want
+        if file.suffix in (".jpg", ".png") and file.parent.absolute() in expected_dirs:
             continue
         logger.debug(f"Deleting file {file}")
         file.unlink()
+# remove empty album dirs left behind
+for d in Path(SYNC_FOLDER).iterdir():
+    if d.is_dir() and not any(d.iterdir()):
+        logger.debug(f"Deleting empty directory {d}")
+        d.rmdir()
 
 
 def sync_audio(audio: Audio):
