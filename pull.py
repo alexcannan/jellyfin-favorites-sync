@@ -102,6 +102,9 @@ def safe(s: str) -> str:
 
 
 def progress(iterable, total: int, desc: str):
+    if total == 0:
+        yield from iterable
+        return
     start = time.monotonic()
     for i, item in enumerate(iterable, 1):
         elapsed = time.monotonic() - start
@@ -267,7 +270,7 @@ progress_messages = {min(int((pct_interval / 100) * len(new_audios) * i), len(ne
 with concurrent.futures.ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
     n_complete = 0
     futures = {executor.submit(sync_audio, audio): audio for audio in new_audios}
-    for _ in concurrent.futures.as_completed(futures):
+    for _ in progress(concurrent.futures.as_completed(futures), total=len(new_audios), desc="transcoding"):
         if n_complete in progress_messages:
             logger.info(f"{progress_messages[n_complete]} complete")
         n_complete += 1
