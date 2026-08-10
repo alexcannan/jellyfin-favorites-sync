@@ -34,7 +34,6 @@ assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
 
 N_WORKERS = os.cpu_count() - 1 or 1
 
-
 @dataclass
 class TranscodeTarget:
     extension: str          # e.g. ".mp3"
@@ -151,9 +150,11 @@ class Audio(Item):
 
     @classmethod
     def from_dict(cls, env):
-        # single-track releases in Jellyfin have no Album — treat the track as its own album
+        # loose tracks may lack Album and/or AlbumId
         if "Album" not in env:
-            env = {**env, "Album": env["Name"], "AlbumId": env["Id"]}
+            env = {**env, "Album": env["Name"]}
+        if "AlbumId" not in env:
+            env = {**env, "AlbumId": env["Id"]}
         return super().from_dict(env)
 
     @property
