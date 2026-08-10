@@ -16,6 +16,7 @@ No non-standard Python libraries are required. The transcoding relies on `ffmpeg
 | `JFS_USER_ID` | yes | - | Your Jellyfin user ID. When on your user page, this is located in the url. |
 | `JFS_SERVER_URL` | no | `http://localhost:8096` | The URL of your Jellyfin server. |
 | `JFS_SYNC_FOLDER` | no | `/tmp/jellyfin-favorites-sync` | The directory to sync to. The default is in `/tmp` (which will be emptied on shutdown), change to your desired file system location for persistence. |
+| `JFS_PATH_MAP` | no | - | Docker-style `host:container` prefix map, e.g. `/mnt/media:/media`. Use when Jellyfin runs in a container and reports paths that differ from where the files are mounted on the machine running this script. |
 | `JFS_TARGET` | no | `mp3-v0` | Transcode target. `mp3-v0` (V0 MP3), `ogg-q6` (Vorbis q6), `opus-128` (Opus 128kbps) are available out of the box. Files already in the target format are copied verbatim instead of re-encoded. Other target configurations can be added under `TARGETS` in `pull.py`. |
 
 ### Dry Run

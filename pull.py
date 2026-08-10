@@ -34,6 +34,18 @@ assert API_KEY and USER_ID, "set API_KEY and USER_ID in config.json"
 
 N_WORKERS = os.cpu_count() - 1 or 1
 
+# docker-style "host:container" — remaps Jellyfin's container paths to host paths
+_path_map = os.environ.get("JFS_PATH_MAP", "")
+PATH_MAP = tuple(_path_map.split(":", 1)) if _path_map else None
+if PATH_MAP and len(PATH_MAP) != 2:
+    raise SystemExit(f"JFS_PATH_MAP={_path_map!r} must be host:container")
+
+
+def host_path(path: str) -> str:
+    if PATH_MAP and path.startswith(PATH_MAP[1]):
+        return PATH_MAP[0] + path[len(PATH_MAP[1]):]
+    return path
+
 @dataclass
 class TranscodeTarget:
     extension: str          # e.g. ".mp3"
@@ -155,6 +167,7 @@ class Audio(Item):
             env = {**env, "Album": env["Name"]}
         if "AlbumId" not in env:
             env = {**env, "AlbumId": env["Id"]}
+        env = {**env, "Path": host_path(env["Path"])}
         return super().from_dict(env)
 
     @property
