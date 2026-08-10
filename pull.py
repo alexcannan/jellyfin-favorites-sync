@@ -275,16 +275,23 @@ def sync_audio(audio: Audio):
     # Stream-copy when the source already matches the target container; transcode otherwise.
     # Either way we go through ffmpeg so ReplayGain metadata gets written.
     codec_args = ["-c:a", "copy"] if audio.extension.lower() == TARGET.extension else TARGET.ffmpeg_args
+    # transcode to a temp name and rename on success, so failures never leave
+    # a partial file that later runs mistake for a completed sync
+    tmp_path = audio.sync_filepath.with_name(f".tmp-{audio.sync_filepath.name}")
     rc = subprocess.run([
         ffmpeg_bin,
+        "-y",
         "-i", audio.Path,
         *codec_args,
         *_replaygain_args(audio),
-        audio.sync_filepath,
+        tmp_path,
     ], capture_output=True)
     if rc.returncode:
         logger.error(f"Failed to sync {audio.Path} to {audio.sync_filepath}")
         logger.error(f"ffmpeg output: {rc.stderr.decode()}")
+        tmp_path.unlink(missing_ok=True)
+        return
+    tmp_path.replace(audio.sync_filepath)
 
 
 # sync audio files
