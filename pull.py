@@ -282,6 +282,9 @@ def sync_audio(audio: Audio):
         ffmpeg_bin,
         "-y",
         "-i", audio.Path,
+        # drop embedded art: mislabeled images can fail the whole transcode,
+        # and covers are synced separately per album dir anyway
+        "-vn",
         *codec_args,
         *_replaygain_args(audio),
         tmp_path,
