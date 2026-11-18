@@ -81,7 +81,7 @@ logger.addHandler(console)
 Path(SYNC_FOLDER).mkdir(exist_ok=True, parents=True)
 
 headers = {
-    'X-Emby-Token': API_KEY,
+    'Authorization': f'MediaBrowser Token="{API_KEY}"',
 }
 
 
